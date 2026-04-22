@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChainGive — Real Blockchain Charity</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  .header{padding:1.2rem 2rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:rgba(10,14,26,.97);position:sticky;top:0;z-index:100}
+  .logo{display:flex;align-items:center;gap:10px}
+  .logo-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+  .logo-text{font-size:18px;font-weight:800;letter-spacing:-.5px}
+  .logo-text span{color:var(--accent)}
+  .header-right{display:flex;align-items:center;gap:10px}
+  .net-badge{padding:4px 10px;background:rgba(0,229,180,.1);border:1px solid rgba(0,229,180,.3);border-radius:20px;font-size:11px;color:var(--accent2);font-family:var(--mono)}
+  .wallet-btn{display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:12px;cursor:pointer;transition:all .2s}
+  .wallet-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .wallet-dot{width:8px;height:8px;border-radius:50%;background:#555}
+  .wallet-dot.connected{background:var(--success);animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+  /* ── HERO ── */
+  .hero{padding:3rem 2rem 2rem;text-align:center}
+  .hero h1{font-size:clamp(26px,5vw,46px);font-weight:800;letter-spacing:-1px;line-height:1.1}
+  .hero h1 em{font-style:normal;color:var(--accent)}
+  .hero p{color:var(--muted);margin-top:.75rem;font-size:15px;max-width:460px;margin-inline:auto}
+
+  /* ── CONNECTION BANNER ── */
+  .connect-banner{margin:0 2rem 1.5rem;padding:1.25rem 1.5rem;background:rgba(79,158,255,.06);border:1px solid rgba(79,158,255,.2);border-radius:12px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .connect-banner p{font-size:13px;color:var(--muted)}
+  .connect-banner strong{color:var(--text)}
+  .connect-btn{padding:10px 20px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-weight:700;font-family:var(--display);font-size:14px;cursor:pointer;transition:all .2s;white-space:nowrap}
+  .connect-btn:hover{background:#3d8af0}
+
+  /* ── STATS ── */
+  .stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);margin:0 2rem 1.5rem;border-radius:12px;overflow:hidden;border:1px solid var(--border)}
+  .stat-item{background:var(--surface);padding:1.2rem;text-align:center}
+  .stat-num{font-size:20px;font-weight:800;color:var(--accent);font-family:var(--mono)}
+  .stat-label{font-size:10px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
+
+  /* ── TABS ── */
+  .tabs{display:flex;gap:4px;padding:0 2rem;margin-bottom:1.5rem;border-bottom:1px solid var(--border)}
+  .tab{padding:10px 20px;font-family:var(--display);font-size:13px;font-weight:600;color:var(--muted);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;margin-bottom:-1px}
+  .tab:hover{color:var(--text)}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+  /* ── PANELS ── */
+  .panel{display:none;padding:0 2rem 2rem}
+  .panel.active{display:block}
+
+  /* ── CHARITY CARDS ── */
+  .charities-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+  .charity-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:all .2s;cursor:pointer}
+  .charity-card:hover{border-color:rgba(79,158,255,.4);transform:translateY(-2px)}
+  .card-banner{height:80px;display:flex;align-items:center;justify-content:center;font-size:36px;position:relative;background:linear-gradient(135deg,rgba(79,158,255,.05),rgba(0,229,180,.07))}
+  .card-verified{position:absolute;top:8px;right:8px;background:rgba(0,201,122,.15);border:1px solid rgba(0,201,122,.3);color:var(--success);font-size:10px;padding:2px 8px;border-radius:20px;font-family:var(--mono)}
+  .card-body{padding:1rem}
+  .card-name{font-weight:700;font-size:15px;margin-bottom:4px}
+  .card-cat{font-size:11px;color:var(--accent3);font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+  .card-desc{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:12px}
+  .progress-wrap{margin-bottom:10px}
+  .progress-labels{display:flex;justify-content:space-between;font-size:11px;margin-bottom:5px;font-family:var(--mono)}
+  .progress-raised{color:var(--accent2)}
+  .progress-goal{color:var(--muted)}
+  .progress-bar{height:4px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px}
+  .card-footer{display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid var(--border);font-size:11px;font-family:var(--mono);color:var(--muted)}
+
+  /* ── DONATE PANEL ── */
+  .donate-layout{display:grid;grid-template-columns:1fr 370px;gap:24px;align-items:start}
+  .donate-form{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.75rem}
+  .form-title{font-size:18px;font-weight:700;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+  .form-group{margin-bottom:1.25rem}
+  .form-label{display:block;font-size:12px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;font-family:var(--mono)}
+  .form-control{width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:14px;outline:none;transition:border-color .2s}
+  .form-control:focus{border-color:var(--accent)}
+  select.form-control option{background:#1a2236}
+  .amount-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+  .amount-pill{padding:8px;text-align:center;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-family:var(--mono);font-size:13px;cursor:pointer;transition:all .15s;color:var(--text)}
+  .amount-pill:hover{border-color:var(--accent);color:var(--accent)}
+  .amount-pill.selected{background:rgba(79,158,255,.1);border-color:var(--accent);color:var(--accent)}
+  .fee-box{background:var(--surface2);border-radius:8px;padding:12px 14px;border:1px solid var(--border);font-family:var(--mono);font-size:12px}
+  .fee-row{display:flex;justify-content:space-between;margin-bottom:6px}
+  .fee-row:last-child{margin-bottom:0;padding-top:8px;border-top:1px solid var(--border)}
+  .donate-btn{width:100%;padding:14px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-family:var(--display);font-size:15px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:1.5rem}
+  .donate-btn:hover{background:#3d8af0;transform:translateY(-1px)}
+  .donate-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+  /* ── SIDEBAR ── */
+  .sidebar{display:flex;flex-direction:column;gap:16px}
+  .info-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem}
+  .info-card-title{font-size:12px;font-weight:600;margin-bottom:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .chain-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+  .chain-row:last-child{border-bottom:none}
+  .chain-key{color:var(--muted);font-family:var(--mono)}
+  .chain-val{color:var(--text);font-family:var(--mono);font-size:11px}
+  .green{color:var(--success)}.blue{color:var(--accent)}.yellow{color:var(--warning)}
+
+  /* ── TRANSACTIONS ── */
+  .tx-list{display:flex;flex-direction:column;gap:8px}
+  .tx-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;display:flex;align-items:center;gap:16px;transition:border-color .2s}
+  .tx-item:hover{border-color:rgba(79,158,255,.3)}
+  .tx-icon{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+  .tx-icon.send{background:rgba(79,158,255,.1)}.tx-icon.contract{background:rgba(181,123,255,.1)}
+  .tx-info{flex:1;min-width:0}
+  .tx-hash{font-family:var(--mono);font-size:12px;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+  .tx-hash:hover{text-decoration:underline}
+  .tx-meta{font-size:12px;color:var(--muted);margin-top:2px}
+  .tx-amount{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--accent2);text-align:right}
+  .tx-time{font-family:var(--mono);font-size:11px;color:var(--muted);text-align:right;margin-top:2px}
+  .tx-status{padding:3px 8px;border-radius:20px;font-size:10px;font-family:var(--mono)}
+  .tx-status.confirmed{background:rgba(0,201,122,.1);color:var(--success);border:1px solid rgba(0,201,122,.2)}
+  .tx-status.pending{background:rgba(245,158,11,.1);color:var(--warning);border:1px solid rgba(245,158,11,.2)}
+  .tx-status.failed{background:rgba(255,90,90,.1);color:var(--danger);border:1px solid rgba(255,90,90,.2)}
+  .tx-empty{text-align:center;padding:3rem;color:var(--muted);font-size:14px}
+
+  /* ── TOAST ── */
+  .toast-wrap{position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:10px;pointer-events:none}
+  .toast{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;max-width:340px;font-size:13px;animation:slideIn .3s ease;box-shadow:0 8px 24px rgba(0,0,0,.4);pointer-events:all}
+  .toast.success{border-color:rgba(0,201,122,.4)}.toast.error{border-color:rgba(255,90,90,.4)}.toast.info{border-color:rgba(79,158,255,.4)}
+  .toast-title{font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+  .toast-body{color:var(--muted);font-family:var(--mono);font-size:11px;word-break:break-all}
+  @keyframes slideIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+  /* ── MODAL ── */
+  .modal-wrap{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;display:flex;align-items:center;justify-content:center;padding:1rem}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:2rem;max-width:440px;width:100%;text-align:center}
+  .modal-icon{font-size:48px;margin-bottom:1rem}
+  .modal h3{font-size:20px;font-weight:800;margin-bottom:.5rem}
+  .modal p{color:var(--muted);font-size:13px;line-height:1.6}
+  .modal-hash{font-family:var(--mono);font-size:11px;color:var(--accent);background:var(--surface2);padding:8px 12px;border-radius:8px;margin-top:1rem;word-break:break-all;cursor:pointer}
+  .modal-hash:hover{text-decoration:underline}
+  .modal-actions{display:flex;gap:10px;justify-content:center;margin-top:1.5rem}
+  .modal-btn{padding:10px 24px;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-family:var(--display);font-size:14px}
+  .modal-btn.primary{background:var(--accent);color:#fff}
+  .modal-btn.secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+
+  /* ── IMPACT ── */
+  .impact-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:1.5rem}
+  .impact-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem}
+  .impact-icon{font-size:28px;margin-bottom:8px}
+  .impact-value{font-size:26px;font-weight:800;font-family:var(--mono)}
+  .impact-label{font-size:12px;color:var(--muted);margin-top:4px}
+
+  @media(max-width:900px){.donate-layout{grid-template-columns:1fr}}
+  @media(max-width:640px){.stats-bar{grid-template-columns:repeat(2,1fr)}.impact-grid{grid-template-columns:1fr}.amount-grid{grid-template-columns:repeat(2,1fr)}.header{padding:1rem}.panel,.tabs{padding-left:1rem;padding-right:1rem}.stats-bar,.connect-banner{margin-left:1rem;margin-right:1rem}}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ HEADER ═══════════════ -->
+<header class="header">
+  <div class="logo">
+    <div class="logo-icon">&#9650;</div>
+    <div class="logo-text">Chain<span>Give</span></div>
+  </div>
+  <div class="header-right">
+    <span class="net-badge" id="net-badge">Not Connected</span>
+    <button class="wallet-btn" id="wallet-btn" onclick="connectWallet()">
+      <span class="wallet-dot" id="wallet-dot"></span>
+      <span id="wallet-label">Connect Wallet</span>
+    </button>
+  </div>
+</header>
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<div class="hero">
+  <h1>Donate on the <em>blockchain.</em><br>Track every wei.</h1>
+  <p>100% transparent, immutable, zero-intermediary charity donations powered by smart contracts.</p>
+</div>
+
+<!-- ═══════════════ CONNECT BANNER ═══════════════ -->
+<div class="connect-banner" id="connect-banner">
+  <p><strong>Connect MetaMask</strong> to donate, view your balance and broadcast real transactions.</p>
+  <button class="connect-btn" onclick="connectWallet()">&#128279; Connect MetaMask</button>
+</div>
+
+<!-- ═══════════════ STATS ═══════════════ -->
+<div class="stats-bar">
+  <div class="stat-item">
+    <div class="stat-num" id="stat-block">—</div>
+    <div class="stat-label">Current Block</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num" id="stat-gas">—</div>
+    <div class="stat-label">Gas (Gwei)</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num" id="stat-balance">—</div>
+    <div class="stat-label">Your Balance</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num" id="stat-donated">0 ETH</div>
+    <div class="stat-label">Your Donations</div>
+  </div>
+</div>
+
+<!-- ═══════════════ TABS ═══════════════ -->
+<div class="tabs">
+  <button class="tab active" onclick="showTab('charities',this)">Campaigns</button>
+  <button class="tab" onclick="showTab('donate',this)">Donate</button>
+  <button class="tab" onclick="showTab('transactions',this)">Transactions</button>
+  <button class="tab" onclick="showTab('impact',this)">My Impact</button>
+</div>
+
+<!-- ═══════════════ CAMPAIGNS ═══════════════ -->
+<div class="panel active" id="tab-charities">
+  <div class="charities-grid" id="charities-grid"></div>
+</div>
+
+<!-- ═══════════════ DONATE ═══════════════ -->
+<div class="panel" id="tab-donate">
+  <div class="donate-layout">
+    <div class="donate-form">
+      <div class="form-title">&#9651; Send Donation</div>
+
+      <div class="form-group">
+        <label class="form-label">Select Campaign</label>
+        <select class="form-control" id="select-campaign">
+          <option value="">Choose a charity campaign...</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Amount (ETH)</label>
+        <div class="amount-grid">
+          <div class="amount-pill" onclick="selectAmount(this,'0.001')">0.001</div>
+          <div class="amount-pill selected" onclick="selectAmount(this,'0.01')">0.01</div>
+          <div class="amount-pill" onclick="selectAmount(this,'0.05')">0.05</div>
+          <div class="amount-pill" onclick="selectAmount(this,'0.1')">0.1</div>
+        </div>
+        <input type="number" class="form-control" id="donate-amount" placeholder="Custom amount in ETH" value="0.01" step="0.001" min="0.001" oninput="updateCalc()">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Message (stored on-chain)</label>
+        <input type="text" class="form-control" id="donate-msg" placeholder="Optional message embedded in tx data">
+      </div>
+
+      <div class="fee-box">
+        <div class="fee-row">
+          <span style="color:var(--muted)">Donation</span>
+          <span id="calc-amount">0.0100 ETH</span>
+        </div>
+        <div class="fee-row">
+          <span style="color:var(--muted)">Est. gas</span>
+          <span style="color:var(--muted)" id="calc-gas">fetching...</span>
+        </div>
+        <div class="fee-row">
+          <span style="color:var(--muted);font-weight:700">Total</span>
+          <span style="color:var(--accent2);font-weight:700" id="calc-total">~0.0110 ETH</span>
+        </div>
+      </div>
+
+      <button class="donate-btn" id="donate-btn" onclick="submitDonation()">
+        &#9651; Sign &amp; Broadcast Transaction
+      </button>
+
+      <p style="text-align:center;font-size:11px;color:var(--muted);margin-top:12px;font-family:var(--mono)">
+        Contract: <span style="color:var(--accent)" id="contract-addr">0x742d35Cc...8fD2</span>
+      </p>
+    </div>
+
+    <div class="sidebar">
+      <!-- Live Network Info -->
+      <div class="info-card">
+        <div class="info-card-title">Live Network</div>
+        <div class="chain-row"><span class="chain-key">Chain</span><span class="chain-val blue" id="chain-name">—</span></div>
+        <div class="chain-row"><span class="chain-key">Chain ID</span><span class="chain-val" id="chain-id">—</span></div>
+        <div class="chain-row"><span class="chain-key">Block</span><span class="chain-val" id="live-block">—</span></div>
+        <div class="chain-row"><span class="chain-key">Base fee</span><span class="chain-val green" id="live-basefee">—</span></div>
+        <div class="chain-row"><span class="chain-key">Priority fee</span><span class="chain-val yellow" id="live-priority">—</span></div>
+        <div class="chain-row"><span class="chain-key">ETH/USD</span><span class="chain-val" id="live-price">fetching...</span></div>
+      </div>
+
+      <!-- Wallet -->
+      <div class="info-card">
+        <div class="info-card-title">Your Wallet</div>
+        <div class="chain-row"><span class="chain-key">Address</span><span class="chain-val blue" id="addr-display">—</span></div>
+        <div class="chain-row"><span class="chain-key">Balance</span><span class="chain-val green" id="bal-display">—</span></div>
+        <div class="chain-row"><span class="chain-key">Nonce</span><span class="chain-val" id="nonce-display">—</span></div>
+        <div class="chain-row"><span class="chain-key">Network</span><span class="chain-val green" id="net-display">—</span></div>
+      </div>
+
+      <!-- Smart Contract -->
+      <div class="info-card">
+        <div class="info-card-title">Smart Contract</div>
+        <div class="chain-row"><span class="chain-key">Deploys to</span><span class="chain-val blue">Sepolia Testnet</span></div>
+        <div class="chain-row"><span class="chain-key">Standard</span><span class="chain-val">Payable ETH</span></div>
+        <div class="chain-row"><span class="chain-key">Transparency</span><span class="chain-val green">100% On-chain ✓</span></div>
+        <div class="chain-row"><span class="chain-key">Etherscan</span><span class="chain-val blue" style="cursor:pointer" onclick="openEtherscan()">View ↗</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ TRANSACTIONS ═══════════════ -->
+<div class="panel" id="tab-transactions">
+  <div class="tx-list" id="tx-list">
+    <div class="tx-empty">&#128279; Connect your wallet to see transactions</div>
+  </div>
+</div>
+
+<!-- ═══════════════ IMPACT ═══════════════ -->
+<div class="panel" id="tab-impact">
+  <div class="impact-grid">
+    <div class="impact-card">
+      <div class="impact-icon">&#9654;</div>
+      <div class="impact-value blue" id="imp-total">0 ETH</div>
+      <div class="impact-label">Total donated this session</div>
+    </div>
+    <div class="impact-card">
+      <div class="impact-icon">&#9635;</div>
+      <div class="impact-value" style="color:var(--accent3)" id="imp-txcount">0</div>
+      <div class="impact-label">Transactions broadcast</div>
+    </div>
+    <div class="impact-card">
+      <div class="impact-icon">&#127760;</div>
+      <div class="impact-value" style="color:var(--accent2)" id="imp-campaigns">0</div>
+      <div class="impact-label">Campaigns supported</div>
+    </div>
+    <div class="impact-card">
+      <div class="impact-icon">&#9200;</div>
+      <div class="impact-value" style="color:var(--warning)" id="imp-gas">0 ETH</div>
+      <div class="impact-label">Total gas spent (est.)</div>
+    </div>
+  </div>
+
+  <div class="info-card" style="margin-bottom:16px">
+    <div class="info-card-title">Session Donations</div>
+    <div id="impact-chart" style="padding:8px 0"></div>
+    <p style="font-size:12px;color:var(--muted);margin-top:8px">Donate to campaigns to see your breakdown here.</p>
+  </div>
+
+  <div class="info-card">
+    <div class="info-card-title">Blockchain Proof</div>
+    <p style="font-size:12px;color:var(--muted);line-height:1.7">Every donation generates an immutable transaction hash stored on Ethereum. Click any hash in the Transactions tab to verify on Etherscan — no trust required.</p>
+  </div>
+</div>
+
+<!-- Toasts & Modal containers -->
+<div class="toast-wrap" id="toast-wrap"></div>
+<div id="modal-root"></div>
+
+<!-- ═══════════════════════════════════════════════
+     REAL WEB3 JAVASCRIPT — ethers.js v6
+═══════════════════════════════════════════════ -->
+<script>
+/* ────────────────────────────────────────
+   CONTRACT CONFIG
+   This is a demo contract address on Sepolia testnet.
+   Replace CONTRACT_ADDRESS + ABI with your own deployed contract.
+   The ABI below covers a simple `donate(string memory message)` payable function.
+──────────────────────────────────────── */
+const CONTRACT_ADDRESS = '0x965A39F9C555Cc70732402E63364Cb49d9b27fc0'; // Ganache Local (chainId 1337)
+const CONTRACT_ABI = [
+  // donate(string message) payable
+  {
+    "inputs": [{"internalType":"string","name":"message","type":"string"}],
+    "name": "donate",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  // event Donated(address indexed donor, uint256 amount, string message, uint256 timestamp)
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed":true,"name":"donor","type":"address"},
+      {"indexed":false,"name":"amount","type":"uint256"},
+      {"indexed":false,"name":"message","type":"string"},
+      {"indexed":false,"name":"timestamp","type":"uint256"}
+    ],
+    "name": "Donated",
+    "type": "event"
+  }
+];
+
+/* ────────────────────────────────────────
+   STATE
+──────────────────────────────────────── */
+let provider = null;
+let signer = null;
+let contract = null;
+let userAddress = null;
+let sessionDonations = [];   // { hash, charity, amount, time, status }
+let totalDonated = 0;
+let totalGas = 0;
+
+/* ────────────────────────────────────────
+   CAMPAIGNS DATA
+──────────────────────────────────────── */
+const charities = [
+  { id:1, name:'Clean Water Initiative', cat:'Humanitarian', emoji:'&#128167;', desc:'Funding clean water access in sub-Saharan Africa via transparent on-chain disbursement.', raised:142.5, goal:200, donors:1840 },
+  { id:2, name:'Reforestation DAO', cat:'Environment', emoji:'&#127807;', desc:'Plant trees on-chain. Each donation mints a tree NFT tied to a GPS-verified sapling.', raised:89.2, goal:150, donors:2102 },
+  { id:3, name:'Education for All', cat:'Education', emoji:'&#127979;', desc:'Scholarships for underprivileged students, governed by a DAO of educators and donors.', raised:310, goal:400, donors:4300 },
+  { id:4, name:'Disaster Relief Fund', cat:'Emergency', emoji:'&#128680;', desc:'Instant cross-border relief payments — no banks, no delays, no fees.', raised:55, goal:100, donors:980 },
+  { id:5, name:'Mental Health Collective', cat:'Health', emoji:'&#129505;', desc:'Community-governed mental health resource funding with on-chain accountability.', raised:28.7, goal:80, donors:601 },
+  { id:6, name:'Ocean Cleanup Protocol', cat:'Environment', emoji:'&#127754;', desc:'Tokenized ocean cleanup bounties — verifiable via IoT sensors recorded on-chain.', raised:193, goal:250, donors:3180 },
+];
+
+/* ════════════════════════════════════════
+   CONNECT WALLET (real MetaMask / EIP-1193)
+════════════════════════════════════════ */
+async function connectWallet() {
+  if (!window.ethereum) {
+    showToast('error', 'MetaMask not found',
+      'Install MetaMask extension from metamask.io then reload.');
+    return;
+  }
+  try {
+    showToast('info', 'Connecting...', 'Approve in MetaMask popup.');
+
+    // ethers v6: BrowserProvider wraps window.ethereum
+    provider = new ethers.BrowserProvider(window.ethereum);
+    await provider.send('eth_requestAccounts', []);
+    signer = await provider.getSigner();
+    userAddress = await signer.getAddress();
+
+    // Attach contract instance
+    contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+    await onConnected();
+
+    // Listen for account / chain changes
+    window.ethereum.on('accountsChanged', async (accounts) => {
+      if (accounts.length === 0) { onDisconnected(); return; }
+      provider = new ethers.BrowserProvider(window.ethereum);
+      signer = await provider.getSigner();
+      userAddress = await signer.getAddress();
+      contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+      await onConnected();
+    });
+    window.ethereum.on('chainChanged', () => window.location.reload());
+
+  } catch (err) {
+    if (err.code === 4001) {
+      showToast('error', 'Rejected', 'You rejected the connection request.');
+    } else {
+      showToast('error', 'Connection failed', err.message.slice(0, 80));
+    }
+  }
+}
+
+async function onConnected() {
+  // Update UI
+  const short = userAddress.slice(0,6) + '...' + userAddress.slice(-4);
+  document.getElementById('wallet-label').textContent = short;
+  document.getElementById('wallet-dot').classList.add('connected');
+  document.getElementById('connect-banner').style.display = 'none';
+
+  // Network info
+  const network = await provider.getNetwork();
+  const chainId = Number(network.chainId);
+  const chainNames = { 1:'Ethereum Mainnet', 11155111:'Sepolia Testnet', 137:'Polygon', 80001:'Mumbai', 56:'BSC', 100:'Gnosis' };
+  const chainName = chainNames[chainId] || `Chain ${chainId}`;
+
+  document.getElementById('net-badge').textContent = chainName;
+  document.getElementById('chain-name').textContent = chainName;
+  document.getElementById('chain-id').textContent = chainId;
+  document.getElementById('net-display').textContent = chainName;
+  document.getElementById('addr-display').textContent = short;
+
+  // Balance
+  await refreshBalance();
+
+  // Live block + gas
+  await refreshChainData();
+
+  // Poll every 12 s (approx 1 Ethereum block)
+  setInterval(refreshChainData, 12000);
+  setInterval(refreshBalance, 30000);
+
+  showToast('success', 'Wallet connected!', `${short} on ${chainName}`);
+}
+
+function onDisconnected() {
+  provider = signer = contract = userAddress = null;
+  document.getElementById('wallet-label').textContent = 'Connect Wallet';
+  document.getElementById('wallet-dot').classList.remove('connected');
+  document.getElementById('net-badge').textContent = 'Not Connected';
+  document.getElementById('connect-banner').style.display = 'flex';
+  ['stat-block','stat-gas','stat-balance','live-block','live-basefee','live-priority',
+   'chain-name','chain-id','bal-display','nonce-display','net-display','addr-display']
+    .forEach(id => { const el = document.getElementById(id); if(el) el.textContent = '—'; });
+}
+
+/* ════════════════════════════════════════
+   LIVE CHAIN DATA — real RPC calls
+════════════════════════════════════════ */
+async function refreshChainData() {
+  if (!provider) return;
+  try {
+    // getBlockNumber()
+    const blockNum = await provider.getBlockNumber();
+    const blockStr = blockNum.toLocaleString();
+    document.getElementById('stat-block').textContent = blockStr;
+    document.getElementById('live-block').textContent = blockStr;
+
+    // getFeeData() — returns baseFeePerGas, maxFeePerGas, maxPriorityFeePerGas
+    const feeData = await provider.getFeeData();
+    if (feeData.gasPrice) {
+      const gweiPrice = Number(ethers.formatUnits(feeData.gasPrice, 'gwei')).toFixed(2);
+      document.getElementById('stat-gas').textContent = gweiPrice + ' Gwei';
+      document.getElementById('live-basefee').textContent = gweiPrice + ' Gwei';
+      document.getElementById('calc-gas').textContent = '~' + (Number(gweiPrice) * 21000 / 1e9).toFixed(6) + ' ETH';
+    }
+    if (feeData.maxPriorityFeePerGas) {
+      const prio = Number(ethers.formatUnits(feeData.maxPriorityFeePerGas, 'gwei')).toFixed(2);
+      document.getElementById('live-priority').textContent = prio + ' Gwei';
+    }
+
+    // Fetch ETH price from public API
+    fetchEthPrice();
+  } catch(e) {
+    console.warn('refreshChainData:', e.message);
+  }
+}
+
+async function refreshBalance() {
+  if (!provider || !userAddress) return;
+  try {
+    const bal = await provider.getBalance(userAddress);
+    const balEth = parseFloat(ethers.formatEther(bal)).toFixed(4);
+    document.getElementById('stat-balance').textContent = balEth + ' ETH';
+    document.getElementById('bal-display').textContent = balEth + ' ETH';
+
+    const nonce = await provider.getTransactionCount(userAddress);
+    document.getElementById('nonce-display').textContent = nonce;
+  } catch(e) {
+    console.warn('refreshBalance:', e.message);
+  }
+}
+
+async function fetchEthPrice() {
+  try {
+    const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
+    const data = await res.json();
+    const price = data?.ethereum?.usd;
+    if (price) {
+      document.getElementById('live-price').textContent = '$' + price.toLocaleString();
+    }
+  } catch(e) {
+    document.getElementById('live-price').textContent = 'N/A';
+  }
+}
+
+/* ════════════════════════════════════════
+   SUBMIT DONATION — real transaction
+════════════════════════════════════════ */
+async function submitDonation() {
+  if (!signer) {
+    showToast('error', 'Not connected', 'Connect MetaMask first.');
+    return;
+  }
+  const campId = document.getElementById('select-campaign').value;
+  const amountStr = document.getElementById('donate-amount').value;
+  const message = document.getElementById('donate-msg').value || '';
+
+  if (!campId) { showToast('error', 'No campaign', 'Select a charity campaign.'); return; }
+  const amount = parseFloat(amountStr);
+  if (!amount || amount <= 0) { showToast('error', 'Invalid amount', 'Enter a valid ETH amount.'); return; }
+
+  const charity = charities.find(c => c.id == campId);
+  const btn = document.getElementById('donate-btn');
+  btn.disabled = true;
+  btn.textContent = '⌛ Waiting for signature...';
+
+  try {
+    const valueWei = ethers.parseEther(amountStr);
+
+    /* ── OPTION A: Send to contract donate() function ──
+       Uncomment if you have the actual contract deployed:
+
+    const tx = await contract.donate(message || charity.name, { value: valueWei });
+
+    ── OPTION B: Direct ETH transfer (works without a contract) ──
+       Sends ETH directly to the contract/charity address.
+       This is used here so the demo works on any network.        */
+    const tx = await signer.sendTransaction({
+      to: CONTRACT_ADDRESS,
+      value: valueWei,
+      data: message ? ethers.hexlify(ethers.toUtf8Bytes(message)) : '0x',
+    });
+
+    btn.textContent = '⌛ Broadcasting...';
+    showToast('info', 'Transaction sent!', 'Hash: ' + tx.hash.slice(0,20) + '...');
+
+    // Add to session list as pending
+    const entry = {
+      hash: tx.hash,
+      charity: charity.name,
+      amount: amountStr + ' ETH',
+      time: 'just now',
+      status: 'pending'
+    };
+    sessionDonations.unshift(entry);
+    renderTxList();
+
+    // Wait for 1 confirmation
+    btn.textContent = '⌛ Waiting for confirmation...';
+    const receipt = await tx.wait(1);
+
+    // Confirmed!
+    entry.status = receipt.status === 1 ? 'confirmed' : 'failed';
+    entry.time = 'just now';
+    renderTxList();
+
+    if (receipt.status === 1) {
+      totalDonated += amount;
+      totalGas += parseFloat(ethers.formatEther(receipt.gasUsed * receipt.gasPrice || 0n));
+      charity.raised += amount;
+      updateImpact();
+      renderCharities();
+      showModal(tx.hash, amountStr, charity.name, receipt);
+      refreshBalance();
+    } else {
+      showToast('error', 'Transaction failed', 'The transaction was reverted on-chain.');
+    }
+
+  } catch (err) {
+    if (err.code === 4001 || err.code === 'ACTION_REJECTED') {
+      showToast('error', 'Rejected', 'You rejected the transaction in MetaMask.');
+    } else if (err.code === 'INSUFFICIENT_FUNDS') {
+      showToast('error', 'Insufficient funds', 'Not enough ETH for amount + gas.');
+    } else {
+      showToast('error', 'Error', err.shortMessage || err.message.slice(0, 80));
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '▲ Sign & Broadcast Transaction';
+  }
+}
+
+/* ════════════════════════════════════════
+   UI HELPERS
+════════════════════════════════════════ */
+function renderCharities() {
+  const grid = document.getElementById('charities-grid');
+  const sel = document.getElementById('select-campaign');
+  grid.innerHTML = '';
+  // Reset select options keeping placeholder
+  while(sel.options.length > 1) sel.remove(1);
+
+  charities.forEach(c => {
+    const pct = Math.min(100, Math.round((c.raised / c.goal) * 100));
+    const card = document.createElement('div');
+    card.className = 'charity-card';
+    card.innerHTML = `
+      <div class="card-banner">
+        <span>${c.emoji}</span>
+        <span class="card-verified">✓ Verified</span>
+      </div>
+      <div class="card-body">
+        <div class="card-name">${c.name}</div>
+        <div class="card-cat">${c.cat}</div>
+        <div class="card-desc">${c.desc}</div>
+        <div class="progress-wrap">
+          <div class="progress-labels">
+            <span class="progress-raised">Ξ ${c.raised.toFixed(1)}</span>
+            <span class="progress-goal">of Ξ ${c.goal} (${pct}%)</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+        </div>
+        <div class="card-footer">
+          <span>${c.donors.toLocaleString()} donors</span>
+          <span style="color:var(--accent);cursor:pointer" onclick="goToDonate(${c.id})">Donate →</span>
+        </div>
+      </div>`;
+    grid.appendChild(card);
+    const opt = new Option(`${c.name} — Ξ${c.raised.toFixed(1)}/${c.goal}`, c.id);
+    sel.add(opt);
+  });
+}
+
+function renderTxList() {
+  const list = document.getElementById('tx-list');
+  if (!sessionDonations.length) {
+    list.innerHTML = '<div class="tx-empty">No transactions yet this session.</div>';
+    return;
+  }
+  list.innerHTML = sessionDonations.map(tx => `
+    <div class="tx-item">
+      <div class="tx-icon send">↑</div>
+      <div class="tx-info">
+        <div class="tx-hash" onclick="openTxHash('${tx.hash}')" title="${tx.hash}">${tx.hash.slice(0,18)}...${tx.hash.slice(-6)}</div>
+        <div class="tx-meta">${tx.charity}</div>
+      </div>
+      <div><span class="tx-status ${tx.status}">${tx.status}</span></div>
+      <div>
+        <div class="tx-amount">${tx.amount}</div>
+        <div class="tx-time">${tx.time}</div>
+      </div>
+    </div>`).join('');
+}
+
+function updateImpact() {
+  document.getElementById('stat-donated').textContent = totalDonated.toFixed(4) + ' ETH';
+  document.getElementById('imp-total').textContent = totalDonated.toFixed(4) + ' ETH';
+  document.getElementById('imp-txcount').textContent = sessionDonations.filter(t=>t.status==='confirmed').length;
+  const campaigns = new Set(sessionDonations.filter(t=>t.status==='confirmed').map(t=>t.charity));
+  document.getElementById('imp-campaigns').textContent = campaigns.size;
+  document.getElementById('imp-gas').textContent = totalGas.toFixed(6) + ' ETH';
+
+  // Draw bar chart
+  const chartData = {};
+  sessionDonations.filter(t=>t.status==='confirmed').forEach(t => {
+    const amt = parseFloat(t.amount);
+    chartData[t.charity] = (chartData[t.charity] || 0) + amt;
+  });
+  const total = Object.values(chartData).reduce((a,b)=>a+b,0) || 1;
+  const colors = ['var(--accent)','var(--accent2)','var(--accent3)','var(--warning)','var(--danger)'];
+  const wrap = document.getElementById('impact-chart');
+  wrap.innerHTML = Object.entries(chartData).map(([name,amt],i) => {
+    const pct = Math.round((amt/total)*100);
+    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <div style="width:130px;font-size:11px;color:var(--muted);font-family:var(--mono);text-align:right;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</div>
+      <div style="flex:1;height:14px;background:rgba(255,255,255,.05);border-radius:8px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${colors[i%colors.length]};border-radius:8px"></div>
+      </div>
+      <span style="font-size:12px;font-family:var(--mono);width:40px;color:var(--text)">${pct}%</span>
+    </div>`;
+  }).join('') || '<p style="font-size:12px;color:var(--muted)">No confirmed donations yet.</p>';
+}
+
+function updateCalc() {
+  const amt = parseFloat(document.getElementById('donate-amount').value) || 0;
+  document.getElementById('calc-amount').textContent = amt.toFixed(4) + ' ETH';
+  document.getElementById('calc-total').textContent = '~' + (amt + 0.001).toFixed(4) + ' ETH';
+}
+
+function selectAmount(el, val) {
+  document.querySelectorAll('.amount-pill').forEach(p=>p.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('donate-amount').value = val;
+  updateCalc();
+}
+
+function goToDonate(id) {
+  document.getElementById('select-campaign').value = id;
+  showTab('donate', document.querySelectorAll('.tab')[1]);
+}
+
+function showTab(name, el) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  el.classList.add('active');
+}
+
+/* ════════════════════════════════════════
+   MODAL
+════════════════════════════════════════ */
+function showModal(hash, amount, charity, receipt) {
+  const chainId = receipt?.chainId ? Number(receipt.chainId) : null;
+  const explorerBase = chainId === 11155111
+    ? 'https://sepolia.etherscan.io/tx/'
+    : chainId === 137 ? 'https://polygonscan.com/tx/'
+    : 'https://etherscan.io/tx/';
+
+  document.getElementById('modal-root').innerHTML = `
+    <div class="modal-wrap">
+      <div class="modal">
+        <div class="modal-icon">✅</div>
+        <h3>Donation Confirmed!</h3>
+        <p>Your donation of <strong>${amount} ETH</strong> to <strong>${charity}</strong>
+        has been confirmed on-chain in block <strong>#${receipt?.blockNumber?.toLocaleString() || '?'}</strong>.</p>
+        <div class="modal-hash" onclick="window.open('${explorerBase}${hash}','_blank')" title="Click to open Etherscan">${hash}</div>
+        <div class="modal-actions">
+          <button class="modal-btn primary" onclick="window.open('${explorerBase}${hash}','_blank')">Verify on Etherscan ↗</button>
+          <button class="modal-btn secondary" onclick="document.getElementById('modal-root').innerHTML=''">Close</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ════════════════════════════════════════
+   TOAST
+════════════════════════════════════════ */
+function showToast(type, title, body) {
+  const icons = { success:'✓', error:'⚠', info:'ℹ' };
+  const wrap = document.getElementById('toast-wrap');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.innerHTML = `<div class="toast-title">${icons[type]||''} ${title}</div><div class="toast-body">${body}</div>`;
+  wrap.appendChild(t);
+  setTimeout(()=>t.remove(), 5000);
+}
+
+/* ════════════════════════════════════════
+   UTILITIES
+════════════════════════════════════════ */
+function openTxHash(hash) {
+  // Try to determine explorer from network
+  if (!provider) { navigator.clipboard?.writeText(hash); showToast('info','Copied','Hash copied to clipboard'); return; }
+  provider.getNetwork().then(n => {
+    const chainId = Number(n.chainId);
+    const base = chainId === 11155111 ? 'https://sepolia.etherscan.io/tx/'
+      : chainId === 137 ? 'https://polygonscan.com/tx/'
+      : 'https://etherscan.io/tx/';
+    window.open(base + hash, '_blank');
+  });
+}
+
+function openEtherscan() {
+  window.open('https://sepolia.etherscan.io/address/' + CONTRACT_ADDRESS, '_blank');
+}
+
+/* ════════════════════════════════════════
+   INIT
+════════════════════════════════════════ */
+renderCharities();
+renderTxList();
+updateImpact();
+
+// Auto-connect if already authorized (no popup)
+if (window.ethereum) {
+  window.ethereum.request({ method: 'eth_accounts' }).then(async accounts => {
+    if (accounts.length > 0) {
+      provider = new ethers.BrowserProvider(window.ethereum);
+      signer = await provider.getSigner();
+      userAddress = await signer.getAddress();
+      contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+      await onConnected();
+    }
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+{
+  "name": "charity-blockchain-backend",
+  "version": "1.0.0",
+  "description": "Backend server for blockchain-based charity donation platform",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "nodemon backend/server.js",
+    "truffle:compile": "truffle compile",
+    "truffle:migrate:ganache": "truffle migrate --network ganache",
+    "truffle:migrate:sepolia": "truffle migrate --network sepolia",
+    "truffle:test": "truffle test",
+    "ganache": "ganache --deterministic --mnemonic 'extend health dash prepare hunt segment junior way burden fence wealth enforce' -p 7545"
+  },
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "ethers": "^6.7.0",
+    "express": "^4.18.2",
+    "mysql2": "^3.6.5",
+    "web3": "^4.0.2"
+  },
+  "devDependencies": {
+    "@truffle/hdwallet-provider": "^2.1.15",
+    "ganache": "^7.9.2",
+    "ganache-cli": "^6.12.2",
+    "nodemon": "^3.0.1",
+    "solc": "^0.8.19",
+    "truffle": "^5.11.4"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  }
+}
